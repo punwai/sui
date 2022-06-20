@@ -1310,7 +1310,12 @@
                 "type": "object",
                 "required": [
                   "destinationAddr",
+                  "function",
+                  "instigator",
+                  "module",
                   "objectId",
+                  "packageId",
+                  "recipient",
                   "type",
                   "version"
                 ],
@@ -1318,8 +1323,23 @@
                   "destinationAddr": {
                     "$ref": "#/components/schemas/SuiAddress"
                   },
+                  "function": {
+                    "type": "string"
+                  },
+                  "instigator": {
+                    "$ref": "#/components/schemas/SuiAddress"
+                  },
+                  "module": {
+                    "type": "string"
+                  },
                   "objectId": {
                     "$ref": "#/components/schemas/ObjectID"
+                  },
+                  "packageId": {
+                    "$ref": "#/components/schemas/ObjectID"
+                  },
+                  "recipient": {
+                    "$ref": "#/components/schemas/Owner"
                   },
                   "type": {
                     "$ref": "#/components/schemas/TransferType"
@@ -1518,10 +1538,10 @@
           {
             "type": "object",
             "required": [
-              "SenderAddress"
+              "InstigatorAddress"
             ],
             "properties": {
-              "SenderAddress": {
+              "InstigatorAddress": {
                 "$ref": "#/components/schemas/SuiAddress"
               }
             },
@@ -1547,6 +1567,18 @@
             "properties": {
               "ObjectId": {
                 "$ref": "#/components/schemas/ObjectID"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "TransferType"
+            ],
+            "properties": {
+              "TransferType": {
+                "$ref": "#/components/schemas/TransferType"
               }
             },
             "additionalProperties": false

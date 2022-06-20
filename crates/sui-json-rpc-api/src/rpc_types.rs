@@ -1214,6 +1214,11 @@ pub enum SuiEvent {
     /// Transfer objects to new address / wrap in another object / coin
     #[serde(rename_all = "camelCase")]
     TransferObject {
+        package_id: ObjectID,
+        module: String,
+        function: String,
+        instigator: SuiAddress,
+        recipient: Owner,
         object_id: ObjectID,
         version: SequenceNumber,
         destination_addr: SuiAddress,
@@ -1249,7 +1254,7 @@ impl SuiEvent {
                 package_id,
                 module,
                 function,
-                sender,
+                instigator: sender,
                 type_,
                 contents,
             } => {
@@ -1266,13 +1271,26 @@ impl SuiEvent {
                     bcs,
                 }
             }
-            Event::Publish { sender, package_id } => SuiEvent::Publish { sender, package_id },
+            Event::Publish {
+                instigator: sender,
+                package_id,
+            } => SuiEvent::Publish { sender, package_id },
             Event::TransferObject {
+                package_id,
+                module,
+                function,
+                instigator,
+                recipient,
                 object_id,
                 version,
                 destination_addr,
                 type_,
             } => SuiEvent::TransferObject {
+                package_id,
+                module: module.to_string(),
+                function: function.to_string(),
+                instigator,
+                recipient,
                 object_id,
                 version,
                 destination_addr,
@@ -1282,7 +1300,7 @@ impl SuiEvent {
                 package_id,
                 module,
                 function,
-                sender,
+                instigator: sender,
                 object_id,
             } => SuiEvent::DeleteObject {
                 package_id,
@@ -1295,7 +1313,7 @@ impl SuiEvent {
                 package_id,
                 module,
                 function,
-                sender,
+                instigator: sender,
                 recipient,
                 object_id,
             } => SuiEvent::NewObject {
@@ -1441,9 +1459,10 @@ pub enum SuiEventFilter {
         path: String,
         value: Value,
     },
-    SenderAddress(SuiAddress),
+    InstigatorAddress(SuiAddress),
     EventType(EventType),
     ObjectId(ObjectID),
+    TransferType(TransferType),
     All(Vec<SuiEventFilter>),
     Any(Vec<SuiEventFilter>),
     And(Box<SuiEventFilter>, Box<SuiEventFilter>),
@@ -1464,7 +1483,7 @@ impl TryInto<EventFilter> for SuiEventFilter {
                 EventFilter::MoveEventType(parse_struct_tag(&event_type)?)
             }
             MoveEventField { path, value } => EventFilter::MoveEventField { path, value },
-            SenderAddress(address) => EventFilter::SenderAddress(address),
+            InstigatorAddress(address) => EventFilter::InstigatorAddress(address),
             ObjectId(id) => EventFilter::ObjectId(id),
             All(filters) => EventFilter::MatchAll(
                 filters
@@ -1481,6 +1500,7 @@ impl TryInto<EventFilter> for SuiEventFilter {
             And(filter_a, filter_b) => All(vec![*filter_a, *filter_b]).try_into()?,
             Or(filter_a, filter_b) => Any(vec![*filter_a, *filter_b]).try_into()?,
             EventType(type_) => EventFilter::EventType(type_),
+            TransferType(type_) => EventFilter::TransferType(type_),
         })
     }
 }
