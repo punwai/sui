@@ -7098,7 +7098,10 @@ dependencies = [
  "base64ct",
  "bcs",
  "bincode",
+<<<<<<< HEAD
  "blst",
+=======
+>>>>>>> bae3b9fcbff49f47631be329d55441955a3cd1b2
  "crypto 0.1.0 (git+https://github.com/MystenLabs/narwhal?rev=3cf68183b22acfe014118ef2713d5094159f2f4d)",
  "curve25519-dalek",
  "digest 0.10.3",

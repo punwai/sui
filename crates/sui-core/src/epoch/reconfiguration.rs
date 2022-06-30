@@ -104,7 +104,7 @@ where
                 )
             })
             .collect();
-        let new_committee = Committee::new(next_epoch, votes);
+        let new_committee = Committee::new(next_epoch, votes)?;
         self.state.insert_new_epoch_info(&new_committee)?;
 
         // Reconnect the network if we have an type of AuthorityClient that has a network.
