@@ -1272,6 +1272,46 @@ impl CertifiedTransaction {
             auth_sign_info: AuthorityQuorumSignInfo { epoch, authorities, aggregated_signature},
         }
     }
+    
+    pub fn new_with_signatures(
+        epoch: EpochId,
+        transaction: Transaction,
+        signatures: Vec<(AuthorityName, AuthoritySignature)>,
+    ) -> CertifiedTransaction {
+        let result = blst::min_sig::AggregateSignature::aggregate(
+            &signatures.iter().map(|(pk, sig)| &sig.0).collect::<Vec<_>>()[..],
+            true
+        );
+        let authorities = signatures.iter().map(|(pk, sig)| *pk).collect::<Vec<_>>();
+        match result {
+            Ok(aggregated_signature) => {
+                CertifiedTransaction {
+                    transaction_digest: transaction.transaction_digest,
+                    is_verified: false,
+                    data: transaction.data,
+                    tx_signature: transaction.tx_signature,
+                    auth_sign_info: AuthorityQuorumSignInfo { 
+                        epoch,
+                        authorities,
+                        aggregated_signature: Some(AuthoritySignature(aggregated_signature.to_signature()))
+                    },
+                }
+            },
+            _ => {
+                CertifiedTransaction {
+                    transaction_digest: transaction.transaction_digest,
+                    is_verified: false,
+                    data: transaction.data,
+                    tx_signature: transaction.tx_signature,
+                    auth_sign_info: AuthorityQuorumSignInfo { 
+                        epoch,
+                        authorities,
+                        aggregated_signature: None
+                    }
+                }
+            }
+        }
+    }
 
     pub fn to_transaction(self) -> Transaction {
         Transaction::new(self.data, self.tx_signature)
