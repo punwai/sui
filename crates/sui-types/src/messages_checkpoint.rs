@@ -367,12 +367,12 @@ impl CertifiedCheckpointSummary {
             self.summary.epoch == committee.epoch,
             SuiError::from("Epoch in the summary doesn't match with the committee")
         );
-        let mut obligation = VerificationObligation::default();
-        let idx = obligation.add_message(&self.summary);
-        self.auth_signature
-            .add_to_verification_obligation(committee, &mut obligation, idx)?;
+        // let mut obligation = VerificationObligation::default();
+        // let idx = obligation.add_message(&self.summary);
+        // self.auth_signature
+        //     .add_to_verification_obligation(committee, &mut obligation, idx)?;
 
-        obligation.verify_all()?;
+        // obligation.verify_all()?;
 
         if let Some(contents) = contents {
             fp_ensure!(
