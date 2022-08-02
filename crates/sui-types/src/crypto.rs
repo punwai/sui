@@ -12,6 +12,7 @@ use narwhal_crypto::ed25519::{
     Ed25519Signature,
 };
 use narwhal_crypto::secp256k1::{Secp256k1KeyPair, Secp256k1PublicKey, Secp256k1Signature};
+use narwhal_crypto::zero_crypto::{ZeroKeyPair, ZeroPublicKey, ZeroSignature, ZeroAggregateSignature, ZeroPrivateKey};
 pub use narwhal_crypto::traits::KeyPair as KeypairTraits;
 pub use narwhal_crypto::traits::{
     AggregateAuthenticator, Authenticator, EncodeDecodeBase64, SigningKey, ToFromBytes,
@@ -36,11 +37,11 @@ pub use enum_dispatch::enum_dispatch;
 // Comment the one you want to use
 
 // Authority Objects
-pub type AuthorityKeyPair = Ed25519KeyPair;
-pub type AuthorityPrivateKey = Ed25519PrivateKey;
-pub type AuthorityPublicKey = Ed25519PublicKey;
-pub type AuthoritySignature = Ed25519Signature;
-pub type AggregateAuthoritySignature = Ed25519AggregateSignature;
+pub type AuthorityKeyPair = ZeroKeyPair;
+pub type AuthorityPrivateKey = ZeroPrivateKey;
+pub type AuthorityPublicKey = ZeroPublicKey;
+pub type AuthoritySignature = ZeroSignature;
+pub type AggregateAuthoritySignature = ZeroAggregateSignature;
 
 // Account Objects
 pub type AccountKeyPair = Ed25519KeyPair;
@@ -420,6 +421,10 @@ impl signature::Signature for Secp256k1SuiSignature {
 //             .into())
 //     }
 // }
+
+impl SuiPublicKey for ZeroPublicKey {
+    const FLAG: u8 = 0x03;
+}
 
 //
 // This struct exists due to the limitations of the `enum_dispatch` library.
@@ -905,6 +910,7 @@ impl ToObligationSignature for AuthoritySignature {
 // Careful, the implementation may be overlapping with the AuthoritySignature implementation. Be sure to fix it if it does:
 // TODO: Change all these into macros.
 impl ToObligationSignature for Secp256k1Signature {}
+impl ToObligationSignature for Ed25519Signature {}
 
 #[derive(Default)]
 pub struct VerificationObligation {
