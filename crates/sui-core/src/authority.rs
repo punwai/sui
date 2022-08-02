@@ -1507,7 +1507,6 @@ impl AuthorityState {
 
 #[async_trait]
 impl ExecutionState for AuthorityState {
-    type PubKey = AuthorityPublicKey;
     type Transaction = ConsensusTransaction;
     type Error = SuiError;
     type Outcome = Vec<u8>;
@@ -1517,13 +1516,13 @@ impl ExecutionState for AuthorityState {
     async fn handle_consensus_transaction(
         &self,
         // TODO [2533]: use this once integrating Narwhal reconfiguration
-        _consensus_output: &narwhal_consensus::ConsensusOutput<Self::PubKey>,
+        _consensus_output: &narwhal_consensus::ConsensusOutput,
         consensus_index: ExecutionIndices,
         transaction: Self::Transaction,
     ) -> Result<
         (
             Self::Outcome,
-            Option<narwhal_config::Committee<Self::PubKey>>,
+            Option<narwhal_config::Committee>,
         ),
         Self::Error,
     > {

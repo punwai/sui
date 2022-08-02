@@ -49,12 +49,12 @@ move-vm-runtime = { git = "https://github.com/move-language/move", rev = "790715
 typed-store = { git = "https://github.com/MystenLabs/mysten-infra", rev = "123c9e40b529315e1c1d91a54fb717111c3e349c"}
 mysten-network = { git = "https://github.com/MystenLabs/mysten-infra", rev = "123c9e40b529315e1c1d91a54fb717111c3e349c" }
 
-narwhal-config = { git = "https://github.com/punwai/narwhal-1", rev = "0d1d2a87f8cbf48bb959531d48d3e9a7016dd713", package = "config" }
-narwhal-consensus = { git = "https://github.com/punwai/narwhal-1", rev = "0d1d2a87f8cbf48bb959531d48d3e9a7016dd713", package = "consensus" }
-narwhal-crypto = { git = "https://github.com/punwai/narwhal-1", rev = "0d1d2a87f8cbf48bb959531d48d3e9a7016dd713", package = "crypto", features=["copy_key"]}
-narwhal-executor = { git = "https://github.com/punwai/narwhal-1", rev = "0d1d2a87f8cbf48bb959531d48d3e9a7016dd713", package = "executor" }
-narwhal-types = { git = "https://github.com/punwai/narwhal-1", rev = "0d1d2a87f8cbf48bb959531d48d3e9a7016dd713", package = "types" }
-narwhal-node = { git = "https://github.com/punwai/narwhal-1", rev = "0d1d2a87f8cbf48bb959531d48d3e9a7016dd713", package = "node" }
+narwhal-config = { git = "https://github.com/punwai/narwhal-1", rev = "8de998f52143fcd2c57d61ecf8d997520dd5f3f9", package = "config" }
+narwhal-consensus = { git = "https://github.com/punwai/narwhal-1", rev = "8de998f52143fcd2c57d61ecf8d997520dd5f3f9", package = "consensus" }
+narwhal-crypto = { git = "https://github.com/punwai/narwhal-1", rev = "8de998f52143fcd2c57d61ecf8d997520dd5f3f9", package = "crypto", features=["copy_key", "zero_crypto"]}
+narwhal-executor = { git = "https://github.com/punwai/narwhal-1", rev = "8de998f52143fcd2c57d61ecf8d997520dd5f3f9", package = "executor" }
+narwhal-types = { git = "https://github.com/punwai/narwhal-1", rev = "8de998f52143fcd2c57d61ecf8d997520dd5f3f9", package = "types" }
+narwhal-node = { git = "https://github.com/punwai/narwhal-1", rev = "8de998f52143fcd2c57d61ecf8d997520dd5f3f9", package = "node" }
 workspace-hack = { path = "../workspace-hack"}
 
 [dev-dependencies]
