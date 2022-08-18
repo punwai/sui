@@ -12,11 +12,12 @@ use std::{
 
 use sui_types::{
     base_types::{ObjectID, SuiAddress},
-    crypto::{get_key_pair, AccountKeyPair, AuthoritySignature, Signature, SuiAuthoritySignature},
+    crypto::{get_key_pair, AccountKeyPair, AuthoritySignature, SuiAuthoritySignature},
     error::SuiError,
     gas::SuiGasStatus,
     messages::{
-        AuthenticatedEpoch, InputObjects, SignatureAggregator, Transaction, TransactionData,
+        AuthenticatedEpoch, InputObjects, SignatureAggregator, SignedTransactionEffects,
+        Transaction, TransactionData,
     },
     object::Object,
     SUI_SYSTEM_STATE_OBJECT_ID,
@@ -98,8 +99,7 @@ async fn test_start_epoch_change() {
         gas_object.compute_object_reference(),
         1000,
     );
-    let signature = Signature::new(&tx_data, &sender_key);
-    let transaction = Transaction::new(tx_data, signature);
+    let transaction = Transaction::from_data(tx_data, &sender_key);
     assert_eq!(
         state
             .handle_transaction(transaction.clone())
@@ -115,7 +115,7 @@ async fn test_start_epoch_change() {
         cert = sigs
             .append(
                 state.name,
-                AuthoritySignature::new(&transaction.signed_data, &*state.secret),
+                AuthoritySignature::new(transaction.data(), &*state.secret),
             )
             .unwrap();
     }
@@ -135,7 +135,7 @@ async fn test_start_epoch_change() {
         state.database.clone(),
         InputObjects::new(
             transaction
-                .signed_data
+                .data()
                 .data
                 .input_objects()
                 .unwrap()
@@ -148,7 +148,7 @@ async fn test_start_epoch_change() {
     let (inner_temporary_store, effects, _) = execution_engine::execute_transaction_to_effects(
         vec![],
         temporary_store,
-        transaction.signed_data.data.clone(),
+        transaction.data().data.clone(),
         tx_digest,
         BTreeSet::new(),
         &state.move_vm,
@@ -156,7 +156,7 @@ async fn test_start_epoch_change() {
         SuiGasStatus::new_with_budget(1000, 1, 1),
         state.epoch(),
     );
-    let signed_effects = effects.to_sign_effects(0, &state.name, &*state.secret);
+    let signed_effects = SignedTransactionEffects::new(0, effects, &*state.secret, state.name);
     assert_eq!(
         state
             .commit_certificate(inner_temporary_store, &certificate, &signed_effects)

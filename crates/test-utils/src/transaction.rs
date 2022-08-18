@@ -15,6 +15,7 @@ use sui_sdk::json::SuiJsonValue;
 use sui_types::base_types::ObjectRef;
 use sui_types::base_types::{ObjectID, SuiAddress};
 use sui_types::error::SuiResult;
+use sui_types::message_envelope::Message;
 use sui_types::messages::{Transaction, TransactionEffects, TransactionInfoResponse};
 use sui_types::object::{Object, Owner};
 use tracing::debug;
@@ -66,8 +67,7 @@ pub async fn publish_basics_package(context: &WalletContext, sender: SuiAddress)
             .await
             .unwrap();
 
-        let signature = context.keystore.sign(&sender, &data.to_bytes()).unwrap();
-        Transaction::new(data, signature)
+        Transaction::from_data(data, &context.keystore.signer(sender))
     };
 
     let resp = context
@@ -110,9 +110,7 @@ pub async fn submit_move_transaction(
         .await
         .unwrap();
 
-    let signature = context.keystore.sign(&sender, &data.to_bytes()).unwrap();
-    let tx = Transaction::new(data, signature);
-
+    let tx = Transaction::from_data(data, &context.keystore.signer(sender));
     context.gateway.execute_transaction(tx).await.unwrap()
 }
 
@@ -225,7 +223,7 @@ pub async fn submit_shared_object_transaction(
 pub fn get_unique_effects(replies: Vec<TransactionInfoResponse>) -> TransactionEffects {
     let mut all_effects = HashMap::new();
     for reply in replies {
-        let effects = reply.signed_effects.unwrap().effects;
+        let effects = reply.signed_effects.unwrap().effects().clone();
         all_effects.insert(effects.digest(), effects);
     }
     assert_eq!(all_effects.len(), 1);

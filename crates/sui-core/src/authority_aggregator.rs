@@ -379,8 +379,8 @@ where
                 .signed_effects
                 .ok_or(SuiError::AuthorityInformationUnavailable)?;
 
-            trace!(tx_digest = ?cert_digest, dependencies =? &signed_effects.effects.dependencies, "Got dependencies from source");
-            for returned_digest in &signed_effects.effects.dependencies {
+            trace!(tx_digest = ?cert_digest, dependencies =? &signed_effects.effects().dependencies, "Got dependencies from source");
+            for returned_digest in &signed_effects.effects().dependencies {
                 trace!(tx_digest =? returned_digest, "Found parent of missing cert");
 
                 let inner_transaction_info = source_client
@@ -460,7 +460,7 @@ where
         // Extract the set of authorities that should have this certificate
         // and its full history. We should be able to use these are source authorities.
         let mut candidate_source_authorties: HashSet<AuthorityName> = cert
-            .auth_sign_info
+            .auth_sig()
             .authorities(&self.committee)
             .collect::<SuiResult<HashSet<_>>>()?
             .iter()
@@ -1234,7 +1234,7 @@ where
             validity_threshold = validity,
             "Broadcasting transaction request to authorities"
         );
-        trace!("Transaction data: {:?}", transaction.signed_data.data);
+        trace!("Transaction data: {:?}", transaction.data().data);
 
         struct ProcessTransactionState {
             // The list of signatures gathered at any point
@@ -1291,7 +1291,7 @@ where
                                 debug!(tx_digest = ?tx_digest, ?name, weight, "Received signed transaction from validator handle_transaction");
                                 state.signatures.push((
                                     name,
-                                    inner_signed_transaction.auth_sign_info.signature,
+                                    inner_signed_transaction.auth_sig().signature.clone(),
                                 ));
                                 state.good_stake += weight;
                                 if state.good_stake >= threshold {
@@ -1301,7 +1301,7 @@ where
                                     self.metrics.num_good_stake.observe(state.good_stake as f64);
                                     self.metrics.num_bad_stake.observe(state.bad_stake as f64);
                                     state.certificate =
-                                        Some(CertifiedTransaction::new_with_signatures(
+                                        Some(CertifiedTransaction::new(
                                             transaction_ref.clone(),
                                             state.signatures.clone(),
                                             &self.committee,
@@ -1511,7 +1511,7 @@ where
                                     .entry(*inner_effects.digest())
                                     .or_insert(EffectsStakeInfo {
                                         stake: 0,
-                                        effects: inner_effects.effects,
+                                        effects: inner_effects.effects().clone(),
                                         signatures: vec![],
                                     });
                                 entry.stake += weight;
@@ -1572,7 +1572,11 @@ where
                     good_stake = stake,
                     "Found an effect with good stake over threshold"
                 );
-                return CertifiedTransactionEffects::new(effects, signatures, &self.committee);
+                return CertifiedTransactionEffects::new(
+                    UnsignedTransactionEffects::new(effects),
+                    signatures,
+                    &self.committee,
+                );
             }
         }
 
@@ -1628,7 +1632,7 @@ where
                 // If we have less stake telling us about the latest state of an object
                 // we re-run the certificate on all authorities to ensure it is correct.
                 if let Ok(effects) = self.process_certificate(cert_map[&tx_digest].clone()).await {
-                    if effects.effects.is_object_mutated_here(obj_ref) {
+                    if effects.effects().is_object_mutated_here(obj_ref) {
                         is_ok = true;
                     } else {
                         // TODO: Throw a byzantine fault here
@@ -1889,7 +1893,7 @@ where
         }
 
         let signers: BTreeSet<_> = cert
-            .auth_sign_info
+            .auth_sig()
             .authorities(&self.committee)
             .filter_map(|r| r.ok())
             .cloned()

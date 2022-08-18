@@ -574,7 +574,7 @@ where
     /// If any object does not exist in the store, give it a chance
     /// to download from authorities.
     async fn sync_input_objects_with_authorities(&self, transaction: &Transaction) -> SuiResult {
-        let input_objects = transaction.signed_data.data.input_objects()?;
+        let input_objects = transaction.data().data.input_objects()?;
         let mut objects = self.read_objects_from_store(&input_objects).await?;
         for (object_opt, kind) in objects.iter_mut().zip(&input_objects) {
             if object_opt.is_none() {
@@ -608,7 +608,7 @@ where
         let span = tracing::debug_span!(
             "execute_transaction",
             tx_digest = ?tx_digest,
-            tx_kind = transaction.signed_data.data.kind_as_str()
+            tx_kind = transaction.data().data.kind_as_str()
         );
         let exec_result = self
             .authorities
@@ -625,13 +625,13 @@ where
 
         debug!(
             tx_digest = ?tx_digest,
-            ?effects.effects,
+            effects = ?effects.effects().clone(),
             "Transaction completed successfully"
         );
 
         // Download the latest content of every mutated object from the authorities.
         let mutated_object_refs: BTreeSet<_> = effects
-            .effects
+            .effects()
             .all_mutated()
             .map(|(obj_ref, _)| *obj_ref)
             .collect();
@@ -647,7 +647,7 @@ where
                 mutated_objects,
                 new_certificate.clone(),
                 seq,
-                effects.clone().to_unsigned_effects(),
+                UnsignedTransactionEffects::from_signed(effects.clone()),
                 effects.digest(),
             )
             .await?;
@@ -661,7 +661,7 @@ where
         &self,
         transaction: &Transaction,
     ) -> SuiResult<(InputObjects, Vec<ObjectRef>)> {
-        transaction.verify()?;
+        transaction.verify_user_sig()?;
 
         self.sync_input_objects_with_authorities(transaction)
             .await?;
@@ -727,7 +727,7 @@ where
             .execute_transaction_impl_inner(input_objects, transaction)
             .await
             .tap_ok(|(_, effects)| {
-                if effects.effects.shared_objects.len() > 1 {
+                if effects.effects().shared_objects.len() > 1 {
                     self.metrics.shared_obj_tx.inc();
                 }
             });
@@ -952,8 +952,8 @@ where
         effects: TransactionEffects,
     ) -> Result<SuiParsedTransactionResponse, anyhow::Error> {
         let call = Self::try_get_move_call(&certificate)?;
-        let signer = certificate.signed_data.data.signer();
-        let (gas_payment, _, _) = certificate.signed_data.data.gas();
+        let signer = certificate.data().data.signer();
+        let (gas_payment, _, _) = certificate.data().data.gas();
         let (coin_object_id, split_arg) = match call.arguments.as_slice() {
             [CallArg::Object(ObjectArg::ImmOrOwnedObject((id, _, _))), CallArg::Pure(arg)] => {
                 (id, arg)
@@ -1019,7 +1019,7 @@ where
                 .into())
             }
         };
-        let (gas_payment, _, _) = certificate.signed_data.data.gas();
+        let (gas_payment, _, _) = certificate.data().data.gas();
 
         if let ExecutionStatus::Failure { error } = effects.status {
             return Err(error.into());
@@ -1051,7 +1051,7 @@ where
 
     fn try_get_move_call(certificate: &CertifiedTransaction) -> Result<&MoveCall, anyhow::Error> {
         if let TransactionKind::Single(SingleTransactionKind::Call(ref call)) =
-            certificate.signed_data.data.kind
+            certificate.data().data.kind
         {
             Ok(call)
         } else {
@@ -1214,7 +1214,7 @@ where
         &self,
         tx: Transaction,
     ) -> Result<SuiTransactionResponse, anyhow::Error> {
-        let tx_kind = tx.signed_data.data.kind.clone();
+        let tx_kind = tx.data().data.kind.clone();
         let tx_digest = tx.digest();
 
         debug!(tx_digest = ?tx_digest, "Received execute_transaction request");
@@ -1226,7 +1226,7 @@ where
                 let span = tracing::debug_span!(
                     "gateway_execute_transaction",
                     ?tx_digest,
-                    tx_kind = tx.signed_data.data.kind_as_str()
+                    tx_kind = tx.data().data.kind_as_str()
                 );
 
                 // Use start_coarse_time() if the below turns out to have a perf impact
@@ -1267,7 +1267,7 @@ where
 
                 // Okay to unwrap() since we checked that this is Ok
                 let (certificate, effects) = res.unwrap();
-                let effects = effects.effects;
+                let effects = effects.effects().clone();
 
                 debug!(?tx_digest, "Transaction succeeded");
                 (certificate, effects)

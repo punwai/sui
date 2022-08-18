@@ -17,7 +17,7 @@ use sui_storage::{
     LockService,
 };
 use sui_types::batch::{SignedBatch, TxSequenceNumber};
-use sui_types::crypto::{AuthoritySignInfo, EmptySignInfo};
+use sui_types::crypto::{AuthoritySignInfo, AuthoritySignInfoTrait, EmptySignInfo};
 use sui_types::object::{Owner, OBJECT_START_VERSION};
 use sui_types::{base_types::SequenceNumber, storage::ParentSync};
 use tokio::sync::Notify;
@@ -46,7 +46,10 @@ const LAST_CONSENSUS_INDEX_ADDR: u64 = 0;
 /// S is a template on Authority signature state. This allows SuiDataStore to be used on either
 /// authorities or non-authorities. Specifically, when storing transactions and effects,
 /// S allows SuiDataStore to either store the authority signed version or unsigned version.
-pub struct SuiDataStore<S> {
+pub struct SuiDataStore<S>
+where
+    S: AuthoritySignInfoTrait,
+{
     /// A write-ahead/recovery log used to ensure we finish fully processing certs after errors or
     /// crashes.
     pub wal: Arc<DBWriteAheadLog<CertifiedTransaction>>,
@@ -65,7 +68,9 @@ pub struct SuiDataStore<S> {
     pub(crate) tables: AuthorityStoreTables<S>,
 }
 
-impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> SuiDataStore<S> {
+impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de> + AuthoritySignInfoTrait>
+    SuiDataStore<S>
+{
     /// Open an authority store by directory path
     pub fn open(path: &Path, db_options: Option<Options>) -> Self {
         let tables =
@@ -138,7 +143,7 @@ impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> SuiDataStore<S> {
         self.tables
             .effects
             .get(transaction_digest)?
-            .map(|data| data.effects)
+            .map(|data| data.effects().clone())
             .ok_or(SuiError::TransactionNotFound {
                 digest: *transaction_digest,
             })
@@ -665,10 +670,10 @@ impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> SuiDataStore<S> {
         for (_, object) in mutated_objects {
             temporary_store.write_object(object);
         }
-        for obj_ref in &effects.effects.deleted {
+        for obj_ref in &effects.effects().deleted {
             temporary_store.delete_object(&obj_ref.0, obj_ref.1, DeleteKind::Normal);
         }
-        for obj_ref in &effects.effects.wrapped {
+        for obj_ref in &effects.effects().wrapped {
             temporary_store.delete_object(&obj_ref.0, obj_ref.1, DeleteKind::Wrap);
         }
 
@@ -1350,8 +1355,8 @@ impl SuiDataStore<EmptySignInfo> {
     }
 }
 
-impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> BackingPackageStore
-    for SuiDataStore<S>
+impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de> + AuthoritySignInfoTrait>
+    BackingPackageStore for SuiDataStore<S>
 {
     fn get_package(&self, package_id: &ObjectID) -> SuiResult<Option<Object>> {
         let package = self.get_object(package_id)?;
@@ -1367,7 +1372,9 @@ impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> BackingPackageStore
     }
 }
 
-impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> ParentSync for SuiDataStore<S> {
+impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de> + AuthoritySignInfoTrait> ParentSync
+    for SuiDataStore<S>
+{
     fn get_latest_parent_entry_ref(&self, object_id: ObjectID) -> SuiResult<Option<ObjectRef>> {
         Ok(self
             .get_latest_parent_entry(object_id)?
@@ -1375,7 +1382,9 @@ impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> ParentSync for SuiDa
     }
 }
 
-impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de>> ModuleResolver for SuiDataStore<S> {
+impl<S: Eq + Debug + Serialize + for<'de> Deserialize<'de> + AuthoritySignInfoTrait> ModuleResolver
+    for SuiDataStore<S>
+{
     type Error = SuiError;
 
     fn get_module(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>, Self::Error> {
