@@ -17,10 +17,11 @@ use sui_types::committee::StakeUnit;
 use sui_types::crypto::AccountKeyPair;
 use sui_types::crypto::AuthorityKeyPair;
 use sui_types::crypto::AuthorityPublicKeyBytes;
+use sui_types::crypto::AuthoritySignature;
 use sui_types::crypto::KeypairTraits;
 use sui_types::crypto::PublicKey as AccountsPublicKey;
 use sui_types::crypto::SuiKeyPair;
-use sui_types::sui_serde::KeyPairBase64;
+use sui_types::sui_serde::{AuthSignature, KeyPairBase64};
 
 // Default max number of concurrent requests served
 pub const DEFAULT_GRPC_CONCURRENCY_LIMIT: usize = 20000;
@@ -38,6 +39,7 @@ pub struct NodeConfig {
     pub account_key_pair: Arc<SuiKeyPair>,
     #[serde(default = "default_sui_key_pair")]
     pub network_key_pair: Arc<SuiKeyPair>,
+    // pub proof_of_possession: Arc<>,
     pub db_path: PathBuf,
     #[serde(default = "default_grpc_address")]
     pub network_address: Multiaddr,
@@ -165,12 +167,15 @@ impl ConsensusConfig {
 
 /// Publicly known information about a validator
 /// TODO read most of this from on-chain
+#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub struct ValidatorInfo {
     pub name: String,
     pub public_key: AuthorityPublicKeyBytes,
     pub network_key: AccountsPublicKey,
+    #[serde_as(as = "AuthSignature")]
+    pub proof_of_possession: AuthoritySignature,
     pub stake: StakeUnit,
     pub delegation: StakeUnit,
     pub gas_price: u64,
@@ -199,6 +204,10 @@ impl ValidatorInfo {
 
     pub fn network_key(&self) -> &AccountsPublicKey {
         &self.network_key
+    }
+
+    pub fn proof_of_possession(&self) -> &AuthoritySignature {
+        &self.proof_of_possession
     }
 
     pub fn stake(&self) -> StakeUnit {
